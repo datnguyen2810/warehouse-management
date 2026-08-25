@@ -1,2 +1,2 @@
 # BTL_Web
-Web quản lý kho vật tư
+warehouse-management-system
