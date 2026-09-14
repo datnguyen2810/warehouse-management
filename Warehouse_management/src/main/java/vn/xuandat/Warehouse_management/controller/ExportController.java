@@ -29,6 +29,7 @@ public class ExportController {
     private final MaterialService materialService;
     private final ExportService exportService;
     private final UserService userService;
+
     public ExportController(ExportService exportService, UserService userService, MaterialService materialService) {
         this.exportService = exportService;
         this.userService = userService;
@@ -36,11 +37,12 @@ public class ExportController {
     }
 
     @GetMapping("/admin/exports")
-    public String getExports(@RequestParam(required = false) String statType,
+    public String getExports(@RequestParam(required = false, defaultValue = "month") String statType,
                             @RequestParam(name="userId", required=false) Long userId, 
                             @RequestParam(name="exportCode", required=false) String exportCode, 
                             @RequestParam(name="page", defaultValue="0") int page,
                             Model model) {
+        String normalizedStatType = normalizeStatType(statType);
         int pageSize = 5;
         Pageable pageable = PageRequest.of(page, pageSize);
         Page<Export> exportPage = this.exportService.getPagedExport(userId, exportCode, pageable);
@@ -50,13 +52,16 @@ public class ExportController {
         model.addAttribute("exports", exportPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", exportPage.getTotalPages());
- 
         model.addAttribute("users", this.userService.handleGetAllUsers());
         model.addAttribute("selectedUserId", userId);
+
+        model.addAttribute("selectedStatType", normalizedStatType);
+        model.addAttribute("chartStats", this.exportService.getExportStatistics(normalizedStatType));
+        model.addAttribute("chartTitle", buildChartTitle(normalizedStatType));
         return "admin/export/show-exports";
     }
 
-
+  
     @GetMapping("/admin/exports/create")
     public String showCreateForm(HttpSession session, Model model){
         model.addAttribute("materials", this.materialService.handleGetAllMaterials());
@@ -196,4 +201,18 @@ public class ExportController {
     }
 
 
+    private String normalizeStatType(String statType) {
+        if ("day".equals(statType) || "year".equals(statType)) {
+            return statType;
+        }
+        return "month";
+    }
+
+    private String buildChartTitle(String statType) {
+        return switch (statType) {
+            case "day" -> "Thống kê xuất kho 30 ngày gần đây";
+            case "year" -> "Thống kê xuất kho 10 năm gần đây";
+            default -> "Thống kê xuất kho 12 tháng gần đây";
+        };
+    }
 }
